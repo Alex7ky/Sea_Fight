@@ -3,10 +3,11 @@
 
 #include "common.h"
 
-#define FLG_DEFAULT 0  // Обычный ход 
-#define FLG_WINNER  1  // Данный игрок победил
-#define FLG_LOSE    2  // Данный игрок проиграл
-#define FLG_EXIT   -1  // Если клиент вышел из игры (Не завершив игру) 
+#define FLG_DEFAULT 0    // Обычный ход 
+#define FLG_WINNER  1    // Данный игрок победил
+#define FLG_LOSE    2    // Данный игрок проиграл
+#define FLG_EXIT   -1    // Если клиент вышел из игры (Не завершив игру) 
+#define FLG_GEN_SHIPS 3  // Запрос на генерацию кораблей
 
 #define CLT_DATA struct client_data
 #define SIZE_CLT_DATA sizeof(CLT_DATA)
