@@ -1,3 +1,6 @@
+#ifndef __COMMON_H__
+#define __COMMON_H__
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,4 +20,6 @@
 struct play_field
 {
     char field[FIELD_COLS][FIELD_LINES];    // Игровое поле
-}
+};
+
+#endif
