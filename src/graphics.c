@@ -17,8 +17,9 @@ static WINDOW *cells[2][FIELD_LINES][FIELD_COLS];
  * Полностью инициализирует графику приложения. Функция обязательна 
  * для вызова перед взаимодействием с графикой
  *
- * @retvel  0 Успешное завершение
- * @retval -1 Ошибка при инициализации
+ * @retvel 0                Успешное завершение
+ * @retval GRAPH_ERR        Ошибка при инициализации
+ * @retval GRAPH_SMALL_WIND Размер экрана слишком мал
  */
 int graph_init(void)
 {
@@ -54,7 +55,7 @@ int graph_init(void)
             for(int j = 0; j < FIELD_COLS; j++){
                 cells[field][i][j] = newwin(3, 5, basey + i * 3, basex + j*5);
                 if (cells[field][i][j] == NULL)
-                    return GRAPH_ERR;;
+                    return GRAPH_ERR;
             }
         }
         basex += COLS / 2;
@@ -338,29 +339,4 @@ int graph_item_get(char *title, char **list, int lsize)
     clear();
     refresh();
     return selected;
-}
-
-int main()
-{
-    int c,l;
-    struct play_field f1, f2;
-    struct timeval time = {5, 0};
-
-    c = l = 0;
-    for (int i = 0; i < FIELD_LINES; i++)
-        for(int j = 0; j < FIELD_COLS; j++){
-            f1.field[i][j] = rand()%5;
-            f2.field[i][j] = rand()%5;
-        }
-
-    if (graph_init() < 0){
-        printf("Экран слишком мал для данной игры\n");
-        exit(-1);
-    }
-
-    graph_field_refresh(FIELD_MY, &f1);
-    graph_field_refresh(FIELD_ENEMY, &f2);
-    graph_cell_get(&l, &c, &time);
-    getch();
-    graph_destroy();
 }
