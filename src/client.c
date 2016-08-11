@@ -3,14 +3,14 @@
 
 void obmen (int argc, char **argv)
 {
-	int sock;								// дискрипторы сокетов
-	struct sockaddr_in addr;				// структура с адресом
-    int bytes_read = 0;           			// кол-во принятых байт
-    struct SRV_DATA;						// структура принятая
+    int sock;				    // дискрипторы сокетов
+    struct sockaddr_in addr;		    // структура с адресом
+    int bytes_read = 0;           	    // кол-во принятых байт
+    struct SRV_DATA;			    // структура принятая
     struct CLT_DATA;                        // структура отправленная
 
-	sock = socket(AF_INET, SOCK_STREAM, 0);	// создание TCP-сокета
-	if(sock < 0)
+    sock = socket(AF_INET, SOCK_STREAM, 0);	// создание TCP-сокета
+    if(sock < 0)
     {
         perror("socket");
         exit(-1);
