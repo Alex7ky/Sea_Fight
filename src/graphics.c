@@ -90,7 +90,7 @@ void graph_destroy(void)
  * @param cell  Ячейка
  * @param val   Соответствующее значение в игровом поле (макросы FIELD_..)
  */
-void graph_cell_print(WINDOW *cell, int val)
+static void graph_cell_print(WINDOW *cell, int val)
 {
     switch(val){
         case CELL_MISS:
@@ -213,16 +213,27 @@ void graph_cell_repaint(int line, int col, int numpair)
  * 
  * @param line      Строка выбранной ячейки (будет помещен)
  * @param col       Столбец выбранной ячейки (будет помещен)
+ * @param time      Время для хода
+ *
+ * @retval GRAPH_TIMEOUT Закончилось время выделенное для хода
+ * @retval 0             Успешное завершение
  */
-void graph_cell_get(int *line, int *col)
+int graph_cell_get(int *line, int *col, struct timeval *time)
 {
-    int key;                // Нажатая кнопка
-    int prev_line = *line;  // Предыдыдущее значение строки
-    int prev_col = *col;    // Предыдыдущее значение столбца
+    int     key;                // Нажатая кнопка
+    int     prev_line = *line;  // Предыдыдущее значение строки
+    int     prev_col = *col;    // Предыдыдущее значение столбца
+    fd_set  set;                // Набор отслеживаемых дескрипторов
 
     graph_cell_repaint(*line, *col, COLOR_CELL_ACTIVE);
-    while ((key = getch()) != '\n')
-    {
+    while (1){   
+        // Отслеживаем событие ввода клавиши
+        FD_ZERO(&set);
+        FD_SET(0, &set);
+        if (select(1, &set, NULL, NULL, time) == 0)
+            return GRAPH_TIMEOUT;
+        key = getch();
+
         // Запоминаем координаты предыдущей ячейки
         prev_col = *col;
         prev_line = *line;
@@ -244,6 +255,9 @@ void graph_cell_get(int *line, int *col)
                 if (*col < FIELD_COLS - 1)
                     (*col)++;
             break;
+            case '\n':
+                return 0;
+            break;
         }
 
         // Снимаем выделение с предыдущей ячейки и выделяем новую
@@ -252,7 +266,7 @@ void graph_cell_get(int *line, int *col)
     }
 
     refresh();
-    return;
+    return 0;
 }
 
 
@@ -324,4 +338,29 @@ int graph_item_get(char *title, char **list, int lsize)
     clear();
     refresh();
     return selected;
+}
+
+int main()
+{
+    int c,l;
+    struct play_field f1, f2;
+    struct timeval time = {5, 0};
+
+    c = l = 0;
+    for (int i = 0; i < FIELD_LINES; i++)
+        for(int j = 0; j < FIELD_COLS; j++){
+            f1.field[i][j] = rand()%5;
+            f2.field[i][j] = rand()%5;
+        }
+
+    if (graph_init() < 0){
+        printf("Экран слишком мал для данной игры\n");
+        exit(-1);
+    }
+
+    graph_field_refresh(FIELD_MY, &f1);
+    graph_field_refresh(FIELD_ENEMY, &f2);
+    graph_cell_get(&l, &c, &time);
+    getch();
+    graph_destroy();
 }
