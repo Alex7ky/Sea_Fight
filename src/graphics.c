@@ -1,13 +1,17 @@
 #include "../header/graphics.h"
 
-#define CNT_WINDOW  3   // Количество окон
+/* Цветовые пары */
+#define COLOR_CELL_DEFAULT  0
+#define COLOR_CELL_ACTIVE   1
+#define COLOR_CELL_HIT      2
+#define COLOR_CELL_SHIP     3
 
-/* Индексы окон */
-#define WIN_INSTEP  0   // Окно для ввода хода
-#define WIN_BINSTEP 1   // Граница вокруг окна ввода хода
+/**
+ * Ячейки игрового поля. 2 - количество игровых полей. Подразумевается, то 
+ * есть только поле игрока и поле его противника
+ */
+static WINDOW *cells[2][FIELD_LINES][FIELD_COLS];
 
-static WINDOW *windows[CNT_WINDOW];                 // Графические окна
-static WINDOW *cells[2][FIELD_LINES][FIELD_COLS];   // Ячейки игрового поля
 
 /**
  * Полностью инициализирует графику приложения. Функция обязательна 
@@ -26,16 +30,23 @@ int graph_init(void)
     refresh();
     noecho();
     keypad(stdscr, TRUE);
+    curs_set(0);
+
+    // Включение цветов и инициализация цветовых пар
+    start_color();
+    assume_default_colors(COLOR_WHITE, COLOR_BLUE);
+    init_pair(COLOR_CELL_DEFAULT, COLOR_WHITE, COLOR_BLUE);
+    init_pair(COLOR_CELL_ACTIVE, COLOR_RED, COLOR_BLUE);
+    init_pair(COLOR_CELL_HIT, COLOR_WHITE, COLOR_RED);
+    init_pair(COLOR_CELL_SHIP, COLOR_BLUE, COLOR_WHITE);
 
     // Проверяем вместится ли изображение
-    if (COLS <= FIELD_COLS * 10 + 10|| LINES <= FIELD_LINES + 10){
+    if (COLS <= FIELD_COLS * 10 + 10 || LINES <= FIELD_LINES * 3 + 5){
         endwin();
         return GRAPH_SMALL_WIND;
     }
 
-    // Создаем окна
-
-    // Создаем окна-ячейки моего игровых полей
+    // Создаем окна-ячейки игровых полей
     basex = (COLS / 2 - FIELD_COLS * 5) / 2;
     basey = 3;
     for (int field = 0; field < 2; field++){
@@ -46,7 +57,6 @@ int graph_init(void)
                     return GRAPH_ERR;;
             }
         }
-        // Смещаем начало игрового поля для 
         basex += COLS / 2;
     }
     return 0;
@@ -74,13 +84,13 @@ void graph_destroy(void)
 
 
 /**
- * Выводит обозначающий символ в ячейку в зависимости от значения в поле. 
- * Функция является вспомогательной только внутри данного модуля
+ * Выводит обозначающий символ в ячейку в зависимости от значения в игровом 
+ * поле.  
  * 
  * @param cell  Ячейка
  * @param val   Соответствующее значение в игровом поле (макросы FIELD_..)
  */
-void graph_print_chcell(WINDOW *cell, int val)
+void graph_cell_print(WINDOW *cell, int val)
 {
     switch(val){
         case CELL_MISS:
@@ -88,11 +98,15 @@ void graph_print_chcell(WINDOW *cell, int val)
         break;
 
         case CELL_HIT:
-            mvwprintw(cell, 1, 2, "X");
+            wattron(cell, COLOR_PAIR(COLOR_CELL_HIT));
+            mvwprintw(cell, 1, 1, "   ");
+            wattroff(cell, COLOR_PAIR(COLOR_CELL_HIT));
         break;
 
         case CELL_SHIP:
-            mvwprintw(cell, 1, 2, "#");
+            wattron(cell, COLOR_PAIR(COLOR_CELL_SHIP));
+            mvwprintw(cell, 1, 1, "   ");
+            wattroff(cell, COLOR_PAIR(COLOR_CELL_SHIP));
         break;
 
         default:
@@ -109,7 +123,7 @@ void graph_print_chcell(WINDOW *cell, int val)
  * @param nfield    Поле в котором обновляем (макросы FIELD_..)
  * @param field     Указатель на игровое поле
  */
-void graph_reffield(int nfield, struct play_field *pfield)
+void graph_field_refresh(int nfield, struct play_field *pfield)
 {
     WINDOW  *current;   // Текущая обновляемая ячейка
     int     basex;      // Координата X начала игрового поля
@@ -127,13 +141,13 @@ void graph_reffield(int nfield, struct play_field *pfield)
             wclear(current);
             box(current, 0, 0);
             //Вставляем соответствующий символ в ячейку
-            graph_print_chcell(current, pfield->field[i][j]);
+            graph_cell_print(current, pfield->field[i][j]);
             wrefresh(current);
             usleep(10000);
         }
     }
 
-    // Нумеруем поля. Определяем верхнюю правую границу поля
+    // Определяем верхнюю правую границу поля
     if (nfield == FIELD_ENEMY)
         basex = ((COLS / 2 - FIELD_COLS * 5) / 2) * 3 + FIELD_COLS * 5;
     else
@@ -144,10 +158,12 @@ void graph_reffield(int nfield, struct play_field *pfield)
     ch = 'A';
     for(int i = 0; i < FIELD_COLS; i++)
         mvprintw(basey - 1, basex + 2 + i * 5, "%c", ch++);
+
     // Нумеруем строки
     ch = '0';
     for(int i = 0; i < FIELD_LINES; i++)
         mvprintw(basey + 1 + i * 3, basex - 2, "%c", ch++);
+
     refresh();
     return;
 }
@@ -161,28 +177,94 @@ void graph_reffield(int nfield, struct play_field *pfield)
  * @param col       Столбец
  * @param val       Новое значение (макросы CELL_..)
  */
-void graph_refcell(int nfield, int line, int col, int val)
+void graph_cell_refresh(int nfield, int line, int col, int val)
 {
     WINDOW  *refcell = cells[nfield][line][col];    // Обновляемая ячейка
 
     wclear(refcell);
     box(refcell, 0, 0);
 
-    graph_print_chcell(refcell, val);
+    graph_cell_print(refcell, val);
     wrefresh(refcell);
     return;
 }
 
 
 /**
- * Выводит список строк, предоставляя пользователю выбор одного из них
+ * Выделяет ячейку (Перекрашивает ее рамку)
+ * 
+ * @param line      Строка ячейки
+ * @param col       Столбец ячейки
+ * @param numpair   Цветовая пара (макросы COLOR_CELL_..)
+ */
+void graph_cell_repaint(int line, int col, int numpair)
+{
+    WINDOW *cell = cells[FIELD_ENEMY][line][col];   // Выделяемая ячека
+
+    wattron(cell, COLOR_PAIR(numpair));
+    box(cell, 0, 0);
+    wattroff(cell, COLOR_PAIR(numpair));
+    wrefresh(cell);
+    return;
+}
+
+/**
+ * Предоставляет пользователю возможность выбрать ячейку вражеского поля
+ * 
+ * @param line      Строка выбранной ячейки (будет помещен)
+ * @param col       Столбец выбранной ячейки (будет помещен)
+ */
+void graph_cell_get(int *line, int *col)
+{
+    int key;                // Нажатая кнопка
+    int prev_line = *line;  // Предыдыдущее значение строки
+    int prev_col = *col;    // Предыдыдущее значение столбца
+
+    graph_cell_repaint(*line, *col, COLOR_CELL_ACTIVE);
+    while ((key = getch()) != '\n')
+    {
+        // Запоминаем координаты предыдущей ячейки
+        prev_col = *col;
+        prev_line = *line;
+        switch(key)
+        {
+            case KEY_UP:
+                if (*line > 0)
+                    (*line)--;  
+            break;
+            case KEY_DOWN:
+                if (*line < FIELD_LINES - 1)
+                    (*line)++;
+            break;
+            case KEY_LEFT:
+                if (*col > 0)
+                    (*col)--;
+            break;
+            case KEY_RIGHT:
+                if (*col < FIELD_COLS - 1)
+                    (*col)++;
+            break;
+        }
+
+        // Снимаем выделение с предыдущей ячейки и выделяем новую
+        graph_cell_repaint(prev_line, prev_col, COLOR_CELL_DEFAULT);
+        graph_cell_repaint(*line, *col, COLOR_CELL_ACTIVE);
+    }
+
+    refresh();
+    return;
+}
+
+
+/**
+ * Выводит список строк, выделяя выбранную
  * 
  * @param title     Заголовок списка
  * @param list      Список строк для выбора пользователя
  * @param lsize     Количество элементов(строк) в списке
  * @param selected  Выбраный элемент(строка)
  */
-void graph_reflist(char *title, char **list, int lsize, int selected)
+void graph_item_print(char *title, char **list, int lsize, int selected)
 {
     int offset = 0;
 
@@ -210,13 +292,13 @@ void graph_reflist(char *title, char **list, int lsize, int selected)
  *
  * @retval          Номер выбранного элемента(строки)
  */
-int graph_selectone(char *title, char **list, int lsize)
+int graph_item_get(char *title, char **list, int lsize)
 {
     int key;            // Нажатая кнопка
     int selected = 0;   // Выбраный элемент
 
     clear();
-    graph_reflist(title, list, lsize, selected);
+    graph_item_print(title, list, lsize, selected);
     while ((key = getch()) != '\n')
     {
         /**
@@ -229,13 +311,13 @@ int graph_selectone(char *title, char **list, int lsize)
                 if (selected <= 0)
                     continue;
                 selected --;
-                graph_reflist(title, list, lsize, selected);
+                graph_item_print(title, list, lsize, selected);
             break;
             case KEY_DOWN:
                 if (selected >= lsize - 1)
                     continue;
                 selected++;
-                graph_reflist(title, list, lsize, selected);
+                graph_item_print(title, list, lsize, selected);
             break;
         }
     }

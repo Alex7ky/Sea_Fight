@@ -18,12 +18,11 @@ int graph_init(void);
 void graph_destroy(void);
 
 /* Взаимодействие с игровыми полями */
-void graph_print_chcell(WINDOW *, int);
-void graph_refcell(int, int, int, int);
-void graph_reffield(int, struct play_field *);
+void graph_field_refresh(int, struct play_field *);
+void graph_cell_get(int *, int *);
+void graph_cell_refresh(int, int, int, int);
 
 /* Взаимодействие со списками с выбором(меню и.т.д) */
-int graph_selectone(char *, char **, int);
-void graph_reflist(char *, char **, int, int);
+int graph_item_get(char *, char **, int);
 
 #endif
