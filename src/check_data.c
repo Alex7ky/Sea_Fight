@@ -9,9 +9,11 @@ void Check(CLT_DATA *clt_data,char ** map_pub,char **map_prv)
 	{
 		case CELL_FREE:
 		map_pub[clt_data.posx][clt_data.posy] = CELL_MISS;
+		map_prv[clt_data.posx][clt_data.posy] = CELL_MISS;
 		break;
 		case CELL_SHIP:
 		map_pub[clt_data.posx][clt_data.posy] = CELL_HIT;
+		map_prv[clt_data.posx][clt_data.posy] = CELL_HIT;
 		break;
 	}
 }
