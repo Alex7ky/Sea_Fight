@@ -4,6 +4,7 @@
 #include "net.h"
 
 #include <stdio.h>
+#include <string.h>
 /*
         close()
 */
@@ -22,47 +23,75 @@
         pthreads
 */
 #include <pthread.h>
-
 /*
-        SERVER_S - information by server
-                sock_d - socket descriptor
-                client_1 - descriptor of stream client 1
-                client_2 - descriptor of stream client 2
-                sock_addr - struct address information of server
-                print - pthread id, service for print log of server
-                network - pthread id, network service
-                mutex - block read/write for this structure
+        time_t
+        time()
+        ctime()
+*/
+#include <time.h>
+/*
+        open()
+*/
+#include <fcntl.h>
+/*
+        Поиск порта
+                FPSTART - нижняя граница портов
+                FPLEN - верхняя граница
+*/
+#define FPSTART 1120
+#define FPLEN 10000
+/*
+        SERVER_S - информация о сервере
+                sock_d - дескриптор сокета
+                client_1 - дескриптор потока для первого клиента
+                client_2 - дескриптор потока для второго клиента
+                fl_log - выводить лог в консоль
+                log_d - дескриптор файла
+                client_1_field - поле первого клиента
+                client_2_field - поле второго клиента
+                addr - структура адреса для сервера
+                client_1_addr - адрес первого клиента
+                client_2_addr - адрес второго клиента
+                network - сервис для управления пакетами (взаимодействие клиент-сервер-клиент)
+                mutex - мютекc для блокирования этой структуры перед чтением/записью
 */
 #define SERVER_S struct mServerInformation
-
 SERVER_S {
         int sock_d;
         int client_1;
         int client_2;
-        sockaddr_in sock_addr;
-        pthread_h print;
-        pthread_h network;
+        char fl_log;
+        int log_d;
+        struct play_field client_1_field;
+        struct play_field client_2_field;
+        struct sockaddr_in addr;
+        struct sockaddr_in client_1_addr;
+        struct sockaddr_in client_2_addr;
+        pthread_t network;
         pthread_mutex_t mutex;
 };
 /*
-        Server commands
-                CM_CLOSE - close server
-                CM_HELP - help
-                CM_UNDEF - command not found
+        Команды командной строки
+                CM_CLOSE - остановить и закрыть сервер
+                CM_HELP - помощь по командм
+                CM_INFO - информация о сервере
+                CM_LOG - выводить лог
 */
-#define CM_CLOSE 0
-#define CM_HELP 1
-#define CM_UNDEF -1
+#define CM_CLOSE "close"
+#define CM_HELP "help"
+#define CM_INFO "info"
+#define CM_LOG "log"
 /*
-        Server functions
+        Функции сервера
 */
-SERVER_S InitServer();
-pthread_t InitLOGService();
-pthread_t InitNetworkService();
-void *PrintLogService(void *);
+SERVER_S *InitServer();
+int RemoveServer(SERVER_S *serv);
+int InitServices(SERVER_S *serv);
 void *NetworkService(void *);
-int GetCommand();
-int GetIP(char *buff);
-int GetPORT(int *port);
+int InitCommandLine(SERVER_S *serv);
+void GetIP(SERVER_S *serv);
+void PrintInformation(SERVER_S *serv);
+void PrintHelp();
+void PrintLOG(SERVER_S *serv, char *buff);
 
 #endif
