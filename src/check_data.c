@@ -1,7 +1,4 @@
-#include "../header/net.h"
-#include "../header/common.h"
 #include "../header/check_data.h"
-#include "../header/server.h"
 
 void Check_data(CLT_DATA *clt_data, struct play_field *field , int *current_ships)
 {

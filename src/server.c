@@ -124,6 +124,7 @@ void *NetworkService(void *args)
 {
         SERVER_S *serv = (SERVER_S *)args;
         CLT_DATA client_msg;
+        int rd;
           
         InitRegistration(serv);
         /*
@@ -131,37 +132,78 @@ void *NetworkService(void *args)
         */        
         PrintLOG(serv, "Start game");
         while(1){
-                if(recv(serv->client_1, &client_msg, SIZE_CLT_DATA, 0) < 0){
+                /*
+                        Первый игрок
+                */
+                rd = recv(serv->client_1, &client_msg, SIZE_CLT_DATA, 0);
+                if( rd < 0){
                         perror("Error on receive message from client 1");
                 }
-                CreateAnswer(serv, client_msg, 1);
-                if(recv(serv->client_2, &client_msg, SIZE_CLT_DATA, 0) < 0){
+                if(rd > 0)
+                        CreateAnswer(serv, client_msg, 1);
+                else {
+                        PrintLOG(serv, "Client 1 is out");
+                        pthread_exit(0);
+                }
+                /*
+                        Второй игрок
+                */
+                rd = recv(serv->client_2, &client_msg, SIZE_CLT_DATA, 0);
+                if( rd < 0){
                         perror("Error on receive message from client 2");
                 }
-                CreateAnswer(serv, client_msg, 2);
+                if(rd > 0)
+                        CreateAnswer(serv, client_msg, 2);
+                else {
+                        PrintLOG(serv, "Client 2 is out");
+                        pthread_exit(0);
+                }
         }
 }
-void CreateAnswer(SERVER_T *serv, CLT_DATA *msg, int from)
+void CreateAnswer(SERVER_S *serv, CLT_DATA msg, int from)
 {
         SRV_DATA server_msg;
+        int client;
         
-        switch(msg->flg){
+        switch(msg.flg){
                 case FLG_GEN_SHIPS:
-                        memset(&server_msg.field, 0, sizeof(struct play_field));
-                        gen_ships(&server_msg.field);
                         if(from == 1){
+                                PrintLOG(serv, "New packet from client 1: FLG_GEN_SHIPS");
+                                client = serv->client_1;
                                 server_msg.flg = FLG_STEP;
                         } else {
+                                PrintLOG(serv, "New packet from client 2: FLG_GEN_SHIPS");
+                                client = serv->client_2;
                                 server_msg.flg = FLG_WAIT;
                         }
+                        memset(&server_msg.field, 0, sizeof(struct play_field));
+                        gen_ships(&server_msg.field);                        
                         if(send(client, &server_msg, SIZE_SRV_DATA, 0) < 0){
                                         perror("Error on send message to client");
                         }
                 break;
                 case FLG_STEP:
+                        if(from == 1){
+                                PrintLOG(serv, "New packet from client 1: FLG_STEP");
+                                client = serv->client_1;
+                                server_msg.flg = FLG_STEP;
+                        } else {
+                                PrintLOG(serv, "New packet from client 2: FLG_STEP");
+                                client = serv->client_2;
+                                server_msg.flg = FLG_WAIT;
+                        }
                         
                 break;
                 case FLG_EXIT:
+                        if(from == 1){
+                                PrintLOG(serv, "New packet from client 1: FLG_EXIT");
+                                client = serv->client_1;
+                                server_msg.flg = FLG_STEP;
+                        } else {
+                                PrintLOG(serv, "New packet from client 2: FLG_EXIT");
+                                client = serv->client_2;
+                                server_msg.flg = FLG_WAIT;
+                        }
                 
                 break;
         }
@@ -208,18 +250,22 @@ void InitRegistration(SERVER_S *serv)
                                 serv->client_1_addr.sin_family = client_addr.sin_family;
                                 serv->client_1_addr.sin_addr.s_addr = client_addr.sin_addr.s_addr;
                                 serv->client_1_addr.sin_port = client_addr.sin_port;
-                                PrintLOG(serv, "Player 1 is registered");
                         } else {
                                 serv->client_2 = client;
                                 serv->client_2_addr.sin_family = client_addr.sin_family;
                                 serv->client_2_addr.sin_addr.s_addr = client_addr.sin_addr.s_addr;
                                 serv->client_2_addr.sin_port = client_addr.sin_port;
-                                PrintLOG(serv, "Player 2 is registered");
                         }
                 
                         pthread_mutex_unlock(&serv->mutex);
+                        sprintf(log_data, "Registered: %s (%d)", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+                        PrintLOG(serv, log_data);
                 }
         }
+}
+void UnregisterClient(SERVER_S *serv)
+{
+        
 }
 int InitCommandLine(SERVER_S *serv)
 {

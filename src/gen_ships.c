@@ -14,7 +14,8 @@ bool freedom(int x, int y, struct play_field *my_play_field)
 		for(i = 0; i < 8; i++) {
 			dx = x + d[i][0];
 			dy = y + d[i][1];
-			if ((dx >= 0) && (dx < FIELD_COLS) && (dy >= 0) 
+			
+			if ((dx >= -1) && (dx < FIELD_COLS) && (dy >= -1) 
 				&& (dy < FIELD_LINES) && (my_play_field->prv[dx][dy] == CELL_FREE)) {	
 				ok = true;
 			}
@@ -47,6 +48,7 @@ void gen_ships(struct play_field *my_play_field)
 			do {
 				x  = rand() % FIELD_COLS;
 				y  = rand() % FIELD_LINES;
+				
 				kx = rand() % 2;
 				if(kx == 0) 
 					ky = 1;
@@ -59,8 +61,16 @@ void gen_ships(struct play_field *my_play_field)
 				if(ok)
 					for(i = 0; i < N; i++)
 						my_play_field->prv[x + kx * i][y + ky * i] = CELL_SHIP;
-
+                                
+                                /*printf("x %d - y %d\n", x, y);
+                                for(x = 0; x < FIELD_COLS; x++){
+		                        for(y = 0; y < FIELD_LINES; y++)
+			                        printf("%d ", my_play_field->prv[x][y]);
+			                printf("\n");
+			        }
+			        printf("_______________________________________\n");*/
  			}
 			while(!ok);
+			
 	}
 };
