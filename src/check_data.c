@@ -8,7 +8,9 @@ void Check_data (struct CLT_DATA clt_data, struct play_field *private_field, str
 	{
 		case CELL_FREE:
 		user_field->field[clt_data.posx][clt_data.posy] = CELL_MISS;
+		break;
 		case CELL_SHIP:
 		user_field->field[clt_data.posx][clt_data.posy] = CELL_HIT;
+		break;
 	}
 }
