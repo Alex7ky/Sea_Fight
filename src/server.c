@@ -124,16 +124,63 @@ void *NetworkService(void *args)
 {
         SERVER_S *serv = (SERVER_S *)args;
         CLT_DATA client_msg;
+          
+        InitRegistration(serv);
+        /*
+                Процесс игры
+        */        
+        PrintLOG(serv, "Start game");
+        while(1){
+                if(recv(serv->client_1, &client_msg, SIZE_CLT_DATA, 0) < 0){
+                        perror("Error on receive message from client 1");
+                }
+                CreateAnswer(serv, client_msg, 1);
+                if(recv(serv->client_2, &client_msg, SIZE_CLT_DATA, 0) < 0){
+                        perror("Error on receive message from client 2");
+                }
+                CreateAnswer(serv, client_msg, 2);
+        }
+}
+void CreateAnswer(SERVER_T *serv, CLT_DATA *msg, int from)
+{
+        SRV_DATA server_msg;
+        
+        switch(msg->flg){
+                case FLG_GEN_SHIPS:
+                        memset(&server_msg.field, 0, sizeof(struct play_field));
+                        gen_ships(&server_msg.field);
+                        if(from == 1){
+                                server_msg.flg = FLG_STEP;
+                        } else {
+                                server_msg.flg = FLG_WAIT;
+                        }
+                        if(send(client, &server_msg, SIZE_SRV_DATA, 0) < 0){
+                                        perror("Error on send message to client");
+                        }
+                break;
+                case FLG_STEP:
+                        
+                break;
+                case FLG_EXIT:
+                
+                break;
+        }
+}
+/*
+        Процесс регистрации
+*/
+void InitRegistration(SERVER_S *serv)
+{
+        CLT_DATA client_msg;
         SRV_DATA server_msg;  
         int client;
         struct sockaddr_in client_addr;
         socklen_t addr_len;
+        char log_data[128];
         
         addr_len = sizeof(struct sockaddr_in);
         
-        /*
-                Процесс регистрации
-        */
+        PrintLOG(serv, "Start registration");
         while(serv->client_1 == -1 || serv->client_2 == -1){
                 
                 client = accept(serv->sock_d, (struct sockaddr *) &client_addr, &addr_len);
@@ -141,56 +188,37 @@ void *NetworkService(void *args)
                         perror("Error to accpt");
                         sleep(10);
                 }
-                
+                sprintf(log_data, "New connect: %s (%d)", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+                PrintLOG(serv, log_data);
                 if(pthread_mutex_lock(&serv->mutex) == 0){
                 /*
                         Регистрируем
-                */
-                /*
-                        Генерируем поле для клиента и отправляем
-                        
-                        генерация_карты(&server_msg.field);
-                        server_msg.flg = //Ты зарегался, возми карту, или без флага
-                        
-                */      
-                        
+                */     
+                        /*memset(&server_msg.field, 0, sizeof(struct play_field));
+                        gen_ships(&server_msg.field);
                         if(send(client, &server_msg, SIZE_SRV_DATA, 0) < 0){
-                                        /*
-                                                Не получилось отправить карту,
-                                                ошибка регистрации,
-                                                снова ждем клиента
-                                        */
                                         perror("Error on send message to client");
                                         pthread_mutex_unlock(&serv->mutex);
                                         continue;
                         }
+                        */
                         
-                        if(serv->client_1 == -1){
-                                
+                        if(serv->client_1 == -1){                                               
                                 serv->client_1 = client;
                                 serv->client_1_addr.sin_family = client_addr.sin_family;
                                 serv->client_1_addr.sin_addr.s_addr = client_addr.sin_addr.s_addr;
                                 serv->client_1_addr.sin_port = client_addr.sin_port;
-                                memcpy(&serv->client_1_field, &server_msg.field, sizeof(struct play_field));
+                                PrintLOG(serv, "Player 1 is registered");
                         } else {
-                                
                                 serv->client_2 = client;
                                 serv->client_2_addr.sin_family = client_addr.sin_family;
                                 serv->client_2_addr.sin_addr.s_addr = client_addr.sin_addr.s_addr;
                                 serv->client_2_addr.sin_port = client_addr.sin_port;
-                                memcpy(&serv->client_2_field, &server_msg.field, sizeof(struct play_field));
+                                PrintLOG(serv, "Player 2 is registered");
                         }
                 
                         pthread_mutex_unlock(&serv->mutex);
                 }
-        }
-        /*
-                Процесс игры
-        */
-        while(1){
-                PrintLOG(serv, "Work...");
-                sleep(5);
-                
         }
 }
 int InitCommandLine(SERVER_S *serv)

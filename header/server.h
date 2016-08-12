@@ -2,6 +2,8 @@
 #define _SERVER_H_
 
 #include "net.h"
+#include "gen_ships.h"
+
 
 #include <stdio.h>
 #include <string.h>
@@ -62,6 +64,8 @@ SERVER_S {
         int client_2;
         char fl_log;
         int log_d;
+        int client_1_ships;
+        int client_2_ships;
         struct play_field client_1_field;
         struct play_field client_2_field;
         struct sockaddr_in addr;
@@ -88,6 +92,7 @@ SERVER_S *InitServer();
 int RemoveServer(SERVER_S *serv);
 int InitServices(SERVER_S *serv);
 void *NetworkService(void *);
+void InitRegistration(SERVER_S *serv);
 int InitCommandLine(SERVER_S *serv);
 void GetIP(SERVER_S *serv);
 void PrintInformation(SERVER_S *serv);
