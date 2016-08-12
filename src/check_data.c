@@ -19,7 +19,7 @@ void Check(CLT_DATA *clt_data,char ** map_pub,char **map_prv)
 void Check_data (CLT_DATA *clt_data, struct play_field * cli_1 ,struct play_field cli_2, int id)
 {
 	if (id)
-		Check(clt_data,&cli_1->pub,&cli_2->prv);
+		Check(clt_data,cli_1->pub,cli_2->prv);
 	else
-		Check(clt_data,&cli_2->pub,&cli_1->prv);
+		Check(clt_data,cli_2->pub,cli_1->prv);
 }
