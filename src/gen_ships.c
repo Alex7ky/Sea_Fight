@@ -61,14 +61,6 @@ void gen_ships(struct play_field *my_play_field)
 				if(ok)
 					for(i = 0; i < N; i++)
 						my_play_field->prv[x + kx * i][y + ky * i] = CELL_SHIP;
-                                
-                                /*printf("x %d - y %d\n", x, y);
-                                for(x = 0; x < FIELD_COLS; x++){
-		                        for(y = 0; y < FIELD_LINES; y++)
-			                        printf("%d ", my_play_field->prv[x][y]);
-			                printf("\n");
-			        }
-			        printf("_______________________________________\n");*/
  			}
 			while(!ok);
 			
