@@ -9,6 +9,9 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
+#include "net.h"
+#include "graphics.h"
+
 static int create_sock();
 static struct sockaddr_in create_sockaddr_in(const unsigned short int, 
 	                                         const char *);

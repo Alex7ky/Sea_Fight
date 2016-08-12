@@ -1,5 +1,4 @@
 #include "../header/client.h"
-#include "../header/net.h"
 
 static int create_sock() {
 	int sockfd;
@@ -31,15 +30,16 @@ static struct sockaddr_in create_sockaddr_in(const unsigned short int port,
 static void input_serv_info(unsigned short int *port, 
                             char *ip_addr) {
 	int flg; 
+
+	printf("Введите адрес сервера: ");
+	fgets(ip_addr, 16, stdin);
+	//Проверка корретности ip адреса
 		
 	*port = 0;
 	while ( !((*port > 1024) && (*port < 32000)) ) {
 		printf("Введите порт сервера: ");
 		scanf("%hu", port);
 	}
-	printf("Введите адрес сервера: ");
-	fgets(ip_addr, 16, stdin);
-	//Проверка корретности ip адреса
 }
 
 static int create_connect_serv() {
@@ -94,13 +94,15 @@ int main (void)
 	graph_init();
 	
 	// Установка кораблей клиента
-	graph_field_refresh(FIELD_MY, srv_data.field.pub);
+	graph_field_refresh(FIELD_MY, &srv_data.field);
+	graph_field_refresh(FIELD_ENEMY, &srv_data.field);
 	
 	clt_data.posx = 0;
 	clt_data.posy = 0;
 
 	int current_step = 0;
-
+	//char **field_curr;
+	
 	while(1) {
 		// Оправляем ход клиента 
 		if (srv_data.flg == FLG_STEP) {
@@ -119,21 +121,24 @@ int main (void)
 				perror("send");
 				exit(-1);
 			}
-		}
+			
+			// Определяем какому игроку предоставляется ход
+			//current_step = FIELD_MY;
+			//field_curr = srv_data.field.prv;
+		} 
+
+		if (srv_data.flg == FLG_STEP)
+			graph_field_refresh(FIELD_MY, &srv_data.field);
+
+		if (srv_data.flg == FLG_WAIT)
+			graph_field_refresh(FIELD_ENEMY, &srv_data.field);
+
 		// Принимаем результат хода
 		if (recv(sockfd, &srv_data, sizeof(srv_data), 0) < 0) {
 			perror("recv");
 			exit(-1);
 		}
-		// Определяем какому игроку предоставляется ход
-		if (srv_data.flg == FLG_STEP)
-			current_step = FIELD_MY;
 		
-		if (srv_data.flg == FLG_WAIT) 
-			current_step = FIELD_ENEMY;
-		
-		if (srv_data.flg == FLG_STEP)
-			graph_field_refresh(current_step, srv_data.field);
 	}
 	
 	close(sockfd);
