@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include "../header/common.h"
+#include "common.h"
 
 /* Индексы игровых полей */
 #define FIELD_MY    0   // Мое игровое поле

@@ -19,7 +19,8 @@
  */
 struct play_field
 {
-    char field[FIELD_COLS][FIELD_LINES];    // Игровое поле
+    char pub[FIELD_COLS][FIELD_LINES];    // Игровое поле
+    char prv[FIELD_COLS][FIELD_LINES]; 
 };
 
 #endif

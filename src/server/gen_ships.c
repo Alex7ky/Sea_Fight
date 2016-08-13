@@ -1,5 +1,5 @@
-#include "../header/common.h"
-#include "../header/gen_ships.h"
+#include "../../header/common.h"
+#include "../../header/gen_ships.h"
 
 /**
  * Функция проверки ячеек.
@@ -10,12 +10,13 @@ bool freedom(int x, int y, struct play_field *my_play_field)
 	int i, dx, dy;
 	bool ok;
 	if((x >= 0) && (x < FIELD_COLS) && (y >= 0) 
-		&& (y < FIELD_LINES) && (my_play_field->field[x][y] == CELL_FREE)) {
+		&& (y < FIELD_LINES) && (my_play_field->prv[x][y] == CELL_FREE)) {
 		for(i = 0; i < 8; i++) {
 			dx = x + d[i][0];
 			dy = y + d[i][1];
-			if ((dx >= 0) && (dx < FIELD_COLS) && (dy >= 0) 
-				&& (dy < FIELD_LINES) && (my_play_field->field[dx][dy] == CELL_FREE)) {	
+			
+			if ((dx >= -1) && (dx < FIELD_COLS) && (dy >= -1) 
+				&& (dy < FIELD_LINES) && (my_play_field->prv[dx][dy] == CELL_FREE)) {	
 				ok = true;
 			}
 			else {
@@ -41,12 +42,13 @@ void gen_ships(struct play_field *my_play_field)
 	bool ok;
 	for(x = 0; x < FIELD_COLS; x++)
 		for(y = 0; y < FIELD_LINES; y++)
-			my_play_field->field[x][y] = CELL_FREE;
+			my_play_field->prv[x][y] = CELL_FREE;
 	for(N = 4; N > 0; N--) {
 		for(M = 0; M <= (4 - N); M++)
 			do {
 				x  = rand() % FIELD_COLS;
 				y  = rand() % FIELD_LINES;
+				
 				kx = rand() % 2;
 				if(kx == 0) 
 					ky = 1;
@@ -58,9 +60,9 @@ void gen_ships(struct play_field *my_play_field)
 						ok = false;
 				if(ok)
 					for(i = 0; i < N; i++)
-						my_play_field->field[x + kx * i][y + ky * i] = CELL_SHIP;
-
+						my_play_field->prv[x + kx * i][y + ky * i] = CELL_SHIP;
  			}
 			while(!ok);
+			
 	}
 };

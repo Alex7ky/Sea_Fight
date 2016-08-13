@@ -17,9 +17,8 @@ static WINDOW *cells[2][FIELD_LINES][FIELD_COLS];
  * Полностью инициализирует графику приложения. Функция обязательна 
  * для вызова перед взаимодействием с графикой
  *
- * @retvel 0                Успешное завершение
- * @retval GRAPH_ERR        Ошибка при инициализации
- * @retval GRAPH_SMALL_WIND Размер экрана слишком мал
+ * @retvel  0 Успешное завершение
+ * @retval -1 Ошибка при инициализации
  */
 int graph_init(void)
 {
@@ -55,7 +54,7 @@ int graph_init(void)
             for(int j = 0; j < FIELD_COLS; j++){
                 cells[field][i][j] = newwin(3, 5, basey + i * 3, basex + j*5);
                 if (cells[field][i][j] == NULL)
-                    return GRAPH_ERR;
+                    return GRAPH_ERR;;
             }
         }
         basex += COLS / 2;
@@ -141,9 +140,15 @@ void graph_field_refresh(int nfield, struct play_field *pfield)
             // Перерисовываем рамку
             wclear(current);
             box(current, 0, 0);
-            //Вставляем соответствующий символ в ячейку
-            graph_cell_print(current, pfield->field[i][j]);
-            wrefresh(current);
+            
+			//Вставляем соответствующий символ в ячейку
+			if (nfield == FIELD_MY)
+            	graph_cell_print(current, pfield->prv[i][j]);
+            
+			if (nfield == FIELD_ENEMY)
+				graph_cell_print(current, pfield->pub[i][j]);
+            
+			wrefresh(current);
             usleep(10000);
         }
     }
@@ -340,3 +345,4 @@ int graph_item_get(char *title, char **list, int lsize)
     refresh();
     return selected;
 }
+
