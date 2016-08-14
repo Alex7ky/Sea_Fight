@@ -7,7 +7,7 @@ m4_include([m4/ax_pthread.m4])
 m4_include([m4/ax_with_curses.m4])
 
 AM_MAINTAINER_MODE([disable])
-AM_INIT_AUTOMAKE([-Wall -Werror])
+AM_INIT_AUTOMAKE([subdir-objects serial-tests])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/client/client.c])
 AC_CONFIG_HEADERS([config.h])
@@ -37,7 +37,7 @@ AC_TYPE_SIZE_T
 # Checks for library functions.
 AC_FUNC_FORK
 AC_FUNC_MALLOC
-AC_CHECK_FUNCS([bzero inet_ntoa inet_aton memset select socket])
+AC_CHECK_FUNCS([memcpy bzero inet_ntoa inet_aton memset select socket])
 
 AC_CONFIG_FILES([Makefile 
 		 src/Makefile

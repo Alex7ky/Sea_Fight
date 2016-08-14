@@ -2,6 +2,7 @@
 
 static int create_sock() {
 	int sockfd;
+	struct sockaddr_in addr;
 
 	sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);	// создание TCP-сокета
     
@@ -28,6 +29,7 @@ static struct sockaddr_in create_sockaddr_in(const unsigned short int port,
 
 static void input_serv_info(unsigned short int *port, 
                             char *ip_addr) {
+	int flg; 
 
 	printf("Введите адрес сервера: ");
 	fgets(ip_addr, 16, stdin);
@@ -63,8 +65,10 @@ static int create_connect_serv() {
 int main (void)
 {
 	int sockfd;
+    int bytes_read = 0;   // кол-во принятых байт
     SRV_DATA srv_data;	  // структура от
     CLT_DATA clt_data;    // структура отправленная
+    int id_user;          // идентификатор пользователя (кому пренадлежит ход)
 
 	// Установка соединения с сервером
     sockfd = create_connect_serv();
@@ -96,6 +100,7 @@ int main (void)
 	clt_data.posx = 0;
 	clt_data.posy = 0;
 
+	int current_step = 0;
 	//char **field_curr;
 	
 	while(1) {
@@ -116,17 +121,7 @@ int main (void)
 				perror("send");
 				exit(-1);
 			}
-			
-			// Определяем какому игроку предоставляется ход
-			//current_step = FIELD_MY;
-			//field_curr = srv_data.field.prv;
 		} 
-
-		if (srv_data.flg == FLG_STEP)
-			graph_field_refresh(FIELD_MY, &srv_data.field);
-
-		if (srv_data.flg == FLG_WAIT)
-			graph_field_refresh(FIELD_ENEMY, &srv_data.field);
 
 		// Принимаем результат хода
 		if (recv(sockfd, &srv_data, sizeof(srv_data), 0) < 0) {
@@ -134,6 +129,13 @@ int main (void)
 			exit(-1);
 		}
 		
+		//graph_field_refresh(FIELD_MY, &srv_data.field);
+		if (srv_data.flg == FLG_STEP)
+			graph_cell_refresh(FIELD_MY, srv_data.posx, srv_data.posy, 
+				srv_data.field.prv[srv_data.posx][srv_data.posy]);
+		if (srv_data.flg == FLG_WAIT)
+			graph_cell_refresh(FIELD_ENEMY, srv_data.posx, srv_data.posy, 
+				srv_data.field.pub[srv_data.posx][srv_data.posy]);
 	}
 	
 	close(sockfd);
