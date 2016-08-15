@@ -108,8 +108,6 @@ int main (void)
 	graph_field_refresh(FIELD_MY, &srv_data.field);
 	graph_field_refresh(FIELD_ENEMY, &srv_data.field);
 	
-	printf("test0\n");
-	
 	clt_data.posx = 0;
 	clt_data.posy = 0;
 
@@ -121,7 +119,6 @@ int main (void)
 			perror("recv");
 			exit(-1);
 		}
-		graph_print_msg("Recv\n");
 		
 		if (flg_step == 1)
 			graph_cell_refresh(FIELD_ENEMY, srv_data.posx, srv_data.posy, 
