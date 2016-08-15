@@ -92,7 +92,7 @@ SERVER_S *InitServer();
 int RemoveServer(SERVER_S *serv);
 int InitServices(SERVER_S *serv);
 void *NetworkService(void *);
-void CreateAnswer(SERVER_S *serv, CLT_DATA msg, int from);
+int CreateAnswer(SERVER_S *serv, CLT_DATA msg, int from);
 void InitRegistration(SERVER_S *serv);
 int InitCommandLine(SERVER_S *serv);
 void GetIP(SERVER_S *serv);

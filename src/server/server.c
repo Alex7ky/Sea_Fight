@@ -150,6 +150,7 @@ void *NetworkService(void *args)
         SERVER_S *serv = (SERVER_S *)args;
         CLT_DATA client_msg;
         int rd;
+        int stat;
          
         InitRegistration(serv);
         /*
@@ -160,33 +161,40 @@ void *NetworkService(void *args)
                 /*
                         Первый игрок
                 */
-                rd = recv(serv->client_1, &client_msg, SIZE_CLT_DATA, 0);
-                if( rd < 0){
-                        perror("Error on receive message from client 1");
-                }
-                if(rd > 0)
-                        CreateAnswer(serv, client_msg, 1);
-                else {                        
-                        client_msg.flg = FLG_EXIT;
-                        CreateAnswer(serv, client_msg, 1);
-                        PrintLOG(serv, "Client 1 is out");
-                        break;
-                }
+                do{
+                        rd = recv(serv->client_1, &client_msg, SIZE_CLT_DATA, 0);
+                        if( rd < 0){
+                                perror("Error on receive message from client 1");
+                        }
+                        if(rd > 0)
+                                stat = CreateAnswer(serv, client_msg, 1);
+                        else {                        
+                                stat = 2;
+                                client_msg.flg = FLG_EXIT;
+                                CreateAnswer(serv, client_msg, 1);
+                                PrintLOG(serv, "Client 1 is out");
+                        }
+                } while (stat != 0);
                 /*
                         Второй игрок
                 */
-                rd = recv(serv->client_2, &client_msg, SIZE_CLT_DATA, 0);
-                if( rd < 0){
-                        perror("Error on receive message from client 2");
-                }
-                if(rd > 0)
-                        CreateAnswer(serv, client_msg, 2);
-                else {                        
-                        client_msg.flg = FLG_EXIT;
-                        CreateAnswer(serv, client_msg, 2);
-                        PrintLOG(serv, "Client 2 is out");
+                do{
+                        rd = recv(serv->client_2, &client_msg, SIZE_CLT_DATA, 0);
+                        if( rd < 0){
+                                perror("Error on receive message from client 2");
+                        }
+                        if(rd > 0)
+                                stat = CreateAnswer(serv, client_msg, 2);
+                        else {                        
+                                stat = 2;
+                                client_msg.flg = FLG_EXIT;
+                                CreateAnswer(serv, client_msg, 2);
+                                PrintLOG(serv, "Client 2 is out");
+                        }
+                  } while (stat != 0);
+                  
+                  if(stat == 2)
                         break;
-                }
         }
         
         PrintLOG(serv, "End of game");
@@ -204,12 +212,13 @@ void *NetworkService(void *args)
 /*
         Обрабатываем входящие сообщения и отвечаем
 */
-void CreateAnswer(SERVER_S *serv, CLT_DATA msg, int from)
+int CreateAnswer(SERVER_S *serv, CLT_DATA msg, int from)
 {
         SRV_DATA server_msg;
         int client;
         int client_ships;
         int shot_rez;
+        int stat = 0;
         
         memset(&server_msg.field, 0, sizeof(struct play_field));
         switch(msg.flg){
@@ -241,15 +250,18 @@ void CreateAnswer(SERVER_S *serv, CLT_DATA msg, int from)
                                 /*
                                         Оповещение о начале игры
                                 */
+                                memset(&server_msg.field, 0, sizeof(struct play_field));
+                                server_msg.posx = 0;
+                                server_msg.posy = 0;                               
                                 server_msg.flg = FLG_STEP;
-                                memcpy(&serv->client_1_field, &server_msg.field, sizeof(struct play_field));
-                                if(send(client, &server_msg, SIZE_SRV_DATA, 0) < 0){
+                                //memcpy(server_msg.field.prv, serv->client_1_field.prv, sizeof(char) * FIELD_COLS * FIELD_LINES);
+                                if(send(serv->client_1, &server_msg, SIZE_SRV_DATA, 0) < 0){
                                         perror("Error on send message to client 1");                                        
                                 } else
                                         PrintLOG(serv, "The answer has been sent to client 1");
                                 server_msg.flg = FLG_WAIT;
-                                memcpy(&serv->client_2_field, &server_msg.field, sizeof(struct play_field));
-                                if(send(client, &server_msg, SIZE_SRV_DATA, 0) < 0){
+                                //memcpy(server_msg.field.prv, serv->client_2_field.prv, sizeof(char) * FIELD_COLS * FIELD_LINES);
+                                if(send(serv->client_2, &server_msg, SIZE_SRV_DATA, 0) < 0){
                                         perror("Error on send message to client 2");                                        
                                 } else
                                         PrintLOG(serv, "The answer has been sent to client 2");
@@ -277,8 +289,10 @@ void CreateAnswer(SERVER_S *serv, CLT_DATA msg, int from)
                                 */
                                 if(shot_rez == CELL_MISS)
                                         server_msg.flg = FLG_WAIT;
-                                else
+                                else {
                                         server_msg.flg = FLG_STEP;
+                                        stat = 1;
+                                }
                                 if(pthread_mutex_lock(&serv->mutex) == 0){
                                         if(serv->client_2_ships > client_ships){
                                                 /*
@@ -332,8 +346,10 @@ void CreateAnswer(SERVER_S *serv, CLT_DATA msg, int from)
                                 */
                                 if(shot_rez == CELL_MISS)
                                         server_msg.flg = FLG_WAIT;
-                                else
+                                else {
                                         server_msg.flg = FLG_STEP;
+                                        stat = 1;
+                                }
                                 if(pthread_mutex_lock(&serv->mutex) == 0){
                                         if(serv->client_1_ships > client_ships){
                                                 /*
@@ -376,10 +392,9 @@ void CreateAnswer(SERVER_S *serv, CLT_DATA msg, int from)
                         }                        
                 break;
                 case FLG_EXIT:
+                        stat = 2;
                         if(from == 1){
                                 PrintLOG(serv, "New packet from client 1: FLG_EXIT");
-                                client = serv->client_1;
-                                server_msg.flg = FLG_STEP;
                                 /*
                                         Первый игрок вышел
                                         говорим об этом второму игроку
@@ -391,8 +406,6 @@ void CreateAnswer(SERVER_S *serv, CLT_DATA msg, int from)
                                         PrintLOG(serv, "The answer has been sent to client 2");
                         } else {
                                 PrintLOG(serv, "New packet from client 2: FLG_EXIT");
-                                client = serv->client_2;
-                                server_msg.flg = FLG_WAIT;
                                 /*
                                         Второй игрок вышел
                                         говорим об этом первому игроку
@@ -405,6 +418,8 @@ void CreateAnswer(SERVER_S *serv, CLT_DATA msg, int from)
                         }
                 break;
         }
+        
+        return stat;
 }
 /*
         Процесс регистрации
