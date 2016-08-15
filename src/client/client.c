@@ -21,7 +21,7 @@ static struct sockaddr_in create_sockaddr_in(const unsigned short int port,
     //задаем параметры сервера
     addr.sin_family      = AF_INET;
     addr.sin_port        = htons(port);
-    addr.sin_addr.s_addr = inet_addr("192.168.2.34");//ip_addr);
+    addr.sin_addr.s_addr = inet_addr(ip_addr);
 
     return addr;
 }
