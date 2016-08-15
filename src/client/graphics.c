@@ -149,7 +149,7 @@ void graph_field_refresh(int nfield, struct play_field *pfield)
 				graph_cell_print(current, pfield->pub[i][j]);
             
 			wrefresh(current);
-            usleep(10000);
+            usleep(40000);
         }
     }
 
