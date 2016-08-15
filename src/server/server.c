@@ -166,7 +166,9 @@ void *NetworkService(void *args)
                 }
                 if(rd > 0)
                         CreateAnswer(serv, client_msg, 1);
-                else {
+                else {                        
+                        client_msg.flg = FLG_EXIT;
+                        CreateAnswer(serv, client_msg, 1);
                         PrintLOG(serv, "Client 1 is out");
                         break;
                 }
@@ -179,7 +181,9 @@ void *NetworkService(void *args)
                 }
                 if(rd > 0)
                         CreateAnswer(serv, client_msg, 2);
-                else {
+                else {                        
+                        client_msg.flg = FLG_EXIT;
+                        CreateAnswer(serv, client_msg, 2);
                         PrintLOG(serv, "Client 2 is out");
                         break;
                 }
@@ -205,35 +209,52 @@ void CreateAnswer(SERVER_S *serv, CLT_DATA msg, int from)
         SRV_DATA server_msg;
         int client;
         int client_ships;
+        int shot_rez;
         
         memset(&server_msg.field, 0, sizeof(struct play_field));
         switch(msg.flg){
-                case FLG_GEN_SHIPS:
-                        
+                case FLG_GEN_SHIPS:                        
                         if(from == 1){
                                 PrintLOG(serv, "New packet from client 1: FLG_GEN_SHIPS");
                                 gen_ships(&server_msg.field);
                                 client = serv->client_1;
-                                server_msg.flg = FLG_STEP;
+                                server_msg.flg = FLG_GEN_SHIPS;
                                 memcpy(&serv->client_1_field, &server_msg.field, sizeof(struct play_field));
+                                if(send(client, &server_msg, SIZE_SRV_DATA, 0) < 0){
+                                        perror("Error on send message to client 1");
+                                } else
+                                        PrintLOG(serv, "The answer has been sent to client 1");
                         } else {
                                 PrintLOG(serv, "New packet from client 2: FLG_GEN_SHIPS");
                                 /*
-                                        Засыпаем на время. Иначе сгенерирует одинаковые карты
+                                        Засыпаем на время. Иначе генерирует одинаковые карты
                                 */
                                 sleep(1);
                                 gen_ships(&server_msg.field);
                                 client = serv->client_2;
+                                server_msg.flg = FLG_GEN_SHIPS;
+                                memcpy(&serv->client_2_field, &server_msg.field, sizeof(struct play_field));
+                                if(send(client, &server_msg, SIZE_SRV_DATA, 0) < 0){
+                                        perror("Error on send message to client 2");
+                                } else
+                                        PrintLOG(serv, "The answer has been sent to client 2");
+                                /*
+                                        Оповещение о начале игры
+                                */
+                                server_msg.flg = FLG_STEP;
+                                memcpy(&serv->client_1_field, &server_msg.field, sizeof(struct play_field));
+                                if(send(client, &server_msg, SIZE_SRV_DATA, 0) < 0){
+                                        perror("Error on send message to client 1");                                        
+                                } else
+                                        PrintLOG(serv, "The answer has been sent to client 1");
                                 server_msg.flg = FLG_WAIT;
                                 memcpy(&serv->client_2_field, &server_msg.field, sizeof(struct play_field));
-                        }
-                        /*
-                                Отправляем новую карту клиенту
-                        */
-                        if(send(client, &server_msg, SIZE_SRV_DATA, 0) < 0){
-                                        perror("Error on send message to client");
-                        }
-                        PrintLOG(serv, "The answer has been sent");
+                                if(send(client, &server_msg, SIZE_SRV_DATA, 0) < 0){
+                                        perror("Error on send message to client 2");                                        
+                                } else
+                                        PrintLOG(serv, "The answer has been sent to client 2");
+                        }                        
+                        
                 break;
                 case FLG_STEP:
                         /*
@@ -250,41 +271,53 @@ void CreateAnswer(SERVER_S *serv, CLT_DATA msg, int from)
                                         "Стреляем" по второму игроку
                                 */
                                 client_ships = serv->client_2_ships;
-                                Check_data(&msg, &serv->client_2_field , &client_ships);                                
-                                if(pthread_mutex_lock(&serv->mutex) == 0){
-                                        serv->client_2_ships = client_ships;
-                                        pthread_mutex_unlock(&serv->mutex);
-                                }
+                                shot_rez = Check_data(&msg, &serv->client_2_field , &client_ships);
                                 /*
                                         Сообщение первому игроку
                                 */
-                                server_msg.flg = FLG_WAIT;
+                                if(shot_rez == CELL_MISS)
+                                        server_msg.flg = FLG_WAIT;
+                                else
+                                        server_msg.flg = FLG_STEP;
+                                if(pthread_mutex_lock(&serv->mutex) == 0){
+                                        if(serv->client_2_ships > client_ships){
+                                                /*
+                                                        Если корабль потоплен
+                                                */
+                                                //какое-то действие
+                                                serv->client_2_ships = client_ships;
+                                        }                                        
+                                        pthread_mutex_unlock(&serv->mutex);
+                                }
                                 if(client_ships < 1){
                                         /*
                                                 Если первый игрок победил
                                         */
-                                        //server_msg.flg = FLG_WINNER;
+                                        server_msg.flg = FLG_WINNER;
                                 }
                                 memcpy(server_msg.field.pub, serv->client_2_field.pub, sizeof(char) * FIELD_COLS * FIELD_LINES);
                                 if(send(serv->client_1, &server_msg, SIZE_SRV_DATA, 0) < 0){
                                         perror("Error on send message to client 1");
-                                }
-                                PrintLOG(serv, "The answer has been sent");
+                                } else
+                                        PrintLOG(serv, "The answer has been sent to client 1");
                                 /*
                                         Сообщение второму игроку
                                 */
-                                server_msg.flg = FLG_STEP;
+                                if(shot_rez == CELL_MISS)
+                                        server_msg.flg = FLG_STEP;
+                                else
+                                        server_msg.flg = FLG_WAIT;
                                 if(client_ships < 1){
                                         /*
                                                 Если первый игрок победил
                                         */
-                                        //server_msg.flg = FLG_LOSE;
+                                        server_msg.flg = FLG_LOSE;
                                 }
                                 memcpy(server_msg.field.prv, serv->client_2_field.prv, sizeof(char) * FIELD_COLS * FIELD_LINES);
                                 if(send(serv->client_2, &server_msg, SIZE_SRV_DATA, 0) < 0){
                                         perror("Error on send message to client 2");
-                                }
-                                PrintLOG(serv, "The answer has been sent");
+                                } else
+                                        PrintLOG(serv, "The answer has been sent to client 2");
                         } else {
                                 PrintLOG(serv, "New packet from client 2: FLG_STEP");
                                 client = serv->client_2;
@@ -293,41 +326,53 @@ void CreateAnswer(SERVER_S *serv, CLT_DATA msg, int from)
                                         "Стреляем" по первому игроку
                                 */
                                 client_ships = serv->client_1_ships;
-                                Check_data(&msg, &serv->client_1_field , &client_ships);                                
-                                if(pthread_mutex_lock(&serv->mutex) == 0){
-                                        serv->client_1_ships = client_ships;
-                                        pthread_mutex_unlock(&serv->mutex);
-                                }
+                                shot_rez = Check_data(&msg, &serv->client_1_field , &client_ships);                                
                                 /*
                                         Сообщение второму игроку
                                 */
-                                server_msg.flg = FLG_WAIT;
+                                if(shot_rez == CELL_MISS)
+                                        server_msg.flg = FLG_WAIT;
+                                else
+                                        server_msg.flg = FLG_STEP;
+                                if(pthread_mutex_lock(&serv->mutex) == 0){
+                                        if(serv->client_1_ships > client_ships){
+                                                /*
+                                                        Если корабль потоплен
+                                                */
+                                                //какое-то действие
+                                                serv->client_1_ships = client_ships;
+                                        }                                        
+                                        pthread_mutex_unlock(&serv->mutex);
+                                }
                                 if(client_ships < 1){
                                         /*
                                                 Если второй игрок победил
                                         */
-                                        //server_msg.flg = FLG_WINNER;
-                                }
+                                        server_msg.flg = FLG_WINNER;
+                                }                                
                                 memcpy(server_msg.field.pub, serv->client_1_field.pub, sizeof(char) * FIELD_COLS * FIELD_LINES);
                                 if(send(serv->client_2, &server_msg, SIZE_SRV_DATA, 0) < 0){
                                         perror("Error on send message to client 2");
-                                }
-                                PrintLOG(serv, "The answer has been sent");
+                                } else
+                                        PrintLOG(serv, "The answer has been sent to client 2");
                                 /*
                                         Сообщение первому игроку
                                 */
-                                server_msg.flg = FLG_STEP;
+                                if(shot_rez == CELL_MISS)
+                                        server_msg.flg = FLG_STEP;
+                                else
+                                        server_msg.flg = FLG_WAIT;
                                 if(client_ships < 1){
                                         /*
                                                 Если второй игрок победил
                                         */
-                                        //server_msg.flg = FLG_LOSE;
+                                        server_msg.flg = FLG_LOSE;
                                 }
                                 memcpy(server_msg.field.prv, serv->client_1_field.prv, sizeof(char) * FIELD_COLS * FIELD_LINES);
                                 if(send(serv->client_1, &server_msg, SIZE_SRV_DATA, 0) < 0){
                                         perror("Error on send message to client 1");
-                                }
-                                PrintLOG(serv, "The answer has been sent");
+                                } else
+                                        PrintLOG(serv, "The answer has been sent to client 1");
                         }                        
                 break;
                 case FLG_EXIT:
@@ -342,8 +387,8 @@ void CreateAnswer(SERVER_S *serv, CLT_DATA msg, int from)
                                 server_msg.flg = FLG_EXIT;
                                 if(send(serv->client_2, &server_msg, SIZE_SRV_DATA, 0) < 0){
                                         perror("Error on send message to client 2");
-                                }
-                                PrintLOG(serv, "The answer has been sent");
+                                } else
+                                        PrintLOG(serv, "The answer has been sent to client 2");
                         } else {
                                 PrintLOG(serv, "New packet from client 2: FLG_EXIT");
                                 client = serv->client_2;
@@ -355,8 +400,8 @@ void CreateAnswer(SERVER_S *serv, CLT_DATA msg, int from)
                                 server_msg.flg = FLG_EXIT;
                                 if(send(serv->client_1, &server_msg, SIZE_SRV_DATA, 0) < 0){
                                         perror("Error on send message to client 1");
-                                }
-                                PrintLOG(serv, "The answer has been sent");
+                                } else
+                                        PrintLOG(serv, "The answer has been sent to client 1");
                         }
                 break;
         }
@@ -465,10 +510,10 @@ void GetIP(SERVER_S *serv)
         
         /*
                 Если лень вводить
-                
-        inet_aton("192.168.43.196", &serv->addr.sin_addr);
+        */       
+        inet_aton("192.168.2.34", &serv->addr.sin_addr);
         return;
-        */
+        
         
         while(1){
                 write(1, "Input a server IP: ", strlen("Input a server IP: ") + 1);

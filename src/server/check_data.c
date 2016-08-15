@@ -15,4 +15,6 @@ int Check_data(CLT_DATA *clt_data, struct play_field *field , int *current_ships
 		return CELL_HIT;
 		break;
 	}
+	
+	return -1;
 }
