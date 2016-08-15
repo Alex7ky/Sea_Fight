@@ -19,10 +19,10 @@ AC_PROG_INSTALL
 # Checks for libraries.
 AX_PTHREAD
 AX_PTHREAD([], [AC_MSG_ERROR([requires pthread library])])
-AX_WITH_CURSES
-if test "x$ax_cv_ncurses" != xyes; then
-  AC_MSG_ERROR([requires Ncurses library])
-fi
+AX_WITH_CURSES([], [AC_MSG_ERROR([requires curses library])])
+#if test "x$ax_cv_ncurses" != xyes; then
+#  AC_MSG_ERROR([requires Ncurses library])
+#fi
 
 # Checks for header files.
 AC_HEADER_STDC
