@@ -27,5 +27,5 @@ void graph_cell_refresh(int, int, int, int);
 
 /* Взаимодействие со списками с выбором(меню и.т.д) */
 int graph_item_get(char *, char **, int);
-
+void graph_print_msg(char *);
 #endif

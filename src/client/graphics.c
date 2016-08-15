@@ -41,7 +41,7 @@ int graph_init(void)
     init_pair(COLOR_CELL_SHIP, COLOR_BLUE, COLOR_WHITE);
 
     // Проверяем вместится ли изображение
-    if (COLS <= FIELD_COLS * 10 + 10 || LINES <= FIELD_LINES * 3 + 5){
+    if (COLS <= FIELD_COLS * 10 + 10 || LINES <= FIELD_LINES * 3 + 8){
         endwin();
         return GRAPH_SMALL_WIND;
     }
@@ -344,5 +344,23 @@ int graph_item_get(char *title, char **list, int lsize)
     clear();
     refresh();
     return selected;
+}
+
+/**
+ * Выводит сообщение пользователю в последних двух строках окна
+ * 
+ * @param msg     Выводимое сообщение
+ */
+void graph_print_msg(char *msg)
+{
+    // Очищаем последние 2 строки окна
+    move(LINES -2, 0);
+    clrtoeol();
+    move(LINES -1, 0);
+    clrtoeol();
+
+    // Выводим сообщение
+    mvprintw(LINES - 2, (COLS - strlen(msg)) / 2 , msg);
+    refresh();
 }
 
