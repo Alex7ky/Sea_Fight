@@ -2,7 +2,6 @@
 
 static int create_sock() {
 	int sockfd;
-	struct sockaddr_in addr;
 
 	sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);	// создание TCP-сокета
     
@@ -22,17 +21,20 @@ static struct sockaddr_in create_sockaddr_in(const unsigned short int port,
     //задаем параметры сервера
     addr.sin_family      = AF_INET;
     addr.sin_port        = htons(port);
-    addr.sin_addr.s_addr = inet_addr(ip_addr);
+    addr.sin_addr.s_addr = inet_addr("192.168.2.34");//ip_addr);
 
     return addr;
 }
 
 static void input_serv_info(unsigned short int *port, 
                             char *ip_addr) {
-	int flg; 
 
 	printf("Введите адрес сервера: ");
-	fgets(ip_addr, 16, stdin);
+	
+	if (fgets(ip_addr, 16, stdin) == NULL) {
+		perror("fgets"); 
+		exit(-1);
+	}
 	//Проверка корретности ip адреса
 		
 	*port = 0;
@@ -65,13 +67,12 @@ static int create_connect_serv() {
 int main (void)
 {
 	int sockfd;
-    int bytes_read = 0;   // кол-во принятых байт
     SRV_DATA srv_data;	  // структура от
     CLT_DATA clt_data;    // структура отправленная
-    int id_user;          // идентификатор пользователя (кому пренадлежит ход)
 
 	// Установка соединения с сервером
     sockfd = create_connect_serv();
+	printf("Ожидаем второго игрока..\n");
 
    	// Формируем запрос на генерацию кораблей
     clt_data.flg = FLG_GEN_SHIPS;
@@ -87,30 +88,57 @@ int main (void)
 		perror("recv");
 		exit(-1);
 	}
+
+	if (srv_data.flg == FLG_EXIT) {
+		printf("Второй игрок покинул игру");
+		exit(-1);
+	}
+
 	int status = 0; 
 	struct timeval tv;
 
 	// Инициализация графики
-	graph_init();
-	
+	status = graph_init();
+
+	if (status == GRAPH_SMALL_WIND) {
+		printf("err: small window!\n");
+		exit(-1);
+	}
 	// Установка кораблей клиента
 	graph_field_refresh(FIELD_MY, &srv_data.field);
 	graph_field_refresh(FIELD_ENEMY, &srv_data.field);
 	
+	printf("test0\n");
+	
 	clt_data.posx = 0;
 	clt_data.posy = 0;
 
-	int current_step = 0;
-	//char **field_curr;
-	
+	int flg_step = 0;
+
 	while(1) {
+		// Принимаем информацию хода
+		if (recv(sockfd, &srv_data, sizeof(srv_data), 0) < 0) {
+			perror("recv");
+			exit(-1);
+		}
+		graph_print_msg("Recv\n");
+		
+		if (flg_step == 1)
+			graph_cell_refresh(FIELD_ENEMY, srv_data.posx, srv_data.posy, 
+					srv_data.field.pub[srv_data.posx][srv_data.posy]);	
+		if (flg_step == 0)
+				graph_cell_refresh(FIELD_MY, srv_data.posx, srv_data.posy, 
+					srv_data.field.prv[srv_data.posx][srv_data.posy]);
+
 		// Оправляем ход клиента 
 		if (srv_data.flg == FLG_STEP) {
+			graph_print_msg("Your step!\n");
+	
 			tv.tv_sec = 120;
 			tv.tv_usec = 0;
-		
+
 			status = graph_cell_get(&clt_data.posx, &clt_data.posy, &tv);
-		
+
 			if (status == GRAPH_TIMEOUT) {
 				clt_data.flg = FLG_EXIT;
 			} else {
@@ -121,23 +149,35 @@ int main (void)
 				perror("send");
 				exit(-1);
 			}
+
+			flg_step = 1;
 		} 
 
-		// Принимаем результат хода
-		if (recv(sockfd, &srv_data, sizeof(srv_data), 0) < 0) {
-			perror("recv");
+		if (srv_data.flg == FLG_WAIT) {
+			graph_print_msg("Please wait enemy!\n");
+			flg_step = 0;
+		}
+		if (srv_data.flg == FLG_EXIT) {
+			graph_print_msg("Player 2 Exit!");
+			sleep(3);
+			graph_destroy();
 			exit(-1);
 		}
-		
-		//graph_field_refresh(FIELD_MY, &srv_data.field);
-		if (srv_data.flg == FLG_STEP)
-			graph_cell_refresh(FIELD_MY, srv_data.posx, srv_data.posy, 
-				srv_data.field.prv[srv_data.posx][srv_data.posy]);
-		if (srv_data.flg == FLG_WAIT)
-			graph_cell_refresh(FIELD_ENEMY, srv_data.posx, srv_data.posy, 
-				srv_data.field.pub[srv_data.posx][srv_data.posy]);
+		if (srv_data.flg == FLG_WINNER) {
+			graph_print_msg("You WINNER!");
+			sleep(3);
+			graph_destroy();
+			return 0;
+		}
+		if (srv_data.flg == FLG_LOSE) {
+			graph_print_msg("You lose!");
+			sleep(3);
+			graph_destroy();
+			return 0;
+		}
 	}
 	
+	graph_destroy();
 	close(sockfd);
 	
 	return 0;
