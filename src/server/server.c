@@ -169,9 +169,8 @@ void *NetworkService(void *args)
                         if(rd > 0)
                                 stat = CreateAnswer(serv, client_msg, 1);
                         else {                        
-                                stat = 2;
                                 client_msg.flg = FLG_EXIT;
-                                CreateAnswer(serv, client_msg, 1);
+                                stat = CreateAnswer(serv, client_msg, 1);
                                 PrintLOG(serv, "Client 1 is out");
                         }
                 } while (stat != 0);
@@ -186,9 +185,8 @@ void *NetworkService(void *args)
                         if(rd > 0)
                                 stat = CreateAnswer(serv, client_msg, 2);
                         else {                        
-                                stat = 2;
                                 client_msg.flg = FLG_EXIT;
-                                CreateAnswer(serv, client_msg, 2);
+                                stat = CreateAnswer(serv, client_msg, 2);
                                 PrintLOG(serv, "Client 2 is out");
                         }
                   } while (stat != 0);
@@ -525,10 +523,10 @@ void GetIP(SERVER_S *serv)
         
         /*
                 Если лень вводить
-        */       
+              
         inet_aton("192.168.2.34", &serv->addr.sin_addr);
         return;
-        
+        */ 
         
         while(1){
                 write(1, "Input a server IP: ", strlen("Input a server IP: ") + 1);
