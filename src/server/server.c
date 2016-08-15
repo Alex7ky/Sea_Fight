@@ -173,7 +173,7 @@ void *NetworkService(void *args)
                                 stat = CreateAnswer(serv, client_msg, 1);
                                 PrintLOG(serv, "Client 1 is out");
                         }
-                } while (stat != 0);
+                } while (stat == 1);
                 /*
                         Второй игрок
                 */
@@ -189,7 +189,7 @@ void *NetworkService(void *args)
                                 stat = CreateAnswer(serv, client_msg, 2);
                                 PrintLOG(serv, "Client 2 is out");
                         }
-                  } while (stat != 0);
+                  } while (stat == 1);
                   
                   if(stat == 2)
                         break;
