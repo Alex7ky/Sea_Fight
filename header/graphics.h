@@ -5,11 +5,11 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include "../header/common.h"
+#include "common.h"
 
 /* Индексы игровых полей */
-#define FIELD_MY    0   // Мое игровое поле
-#define FIELD_ENEMY 1   // Игровое поле противника
+#define FIELD_MY    0   /* Мое игровое поле        */
+#define FIELD_ENEMY 1   /* Игровое поле противника */
 
 /* Ошибки */
 #define GRAPH_ERR           -1
@@ -17,15 +17,15 @@
 #define GRAPH_TIMEOUT		-3
 
 /* Общее */
-int graph_init(void);
-void graph_destroy(void);
+int GraphInit(void);
+void GraphDestroy(void);
 
 /* Взаимодействие с игровыми полями */
-void graph_field_refresh(int, struct play_field *);
-int graph_cell_get(int *, int *, struct timeval *);
-void graph_cell_refresh(int, int, int, int);
+void GraphFieldRefresh(int, struct play_field *);
+int GraphCellGet(int *, int *, struct timeval *);
+void GraphCellRefresh(int, int, int, int);
 
 /* Взаимодействие со списками с выбором(меню и.т.д) */
-int graph_item_get(char *, char **, int);
-
+int GraphItemGet(char *, char **, int);
+void GraphPrintMsg(char *);
 #endif

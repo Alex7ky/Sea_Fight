@@ -4,6 +4,6 @@
 #include <time.h>
 #include <stdbool.h>
 
-void gen_ships(struct play_field *);
+void GenShips(struct play_field *);
 
 #endif
